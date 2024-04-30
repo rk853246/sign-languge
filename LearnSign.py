@@ -35,13 +35,7 @@ class SignLanguageApp:
             'Z': 'Tutorial_Images/Z.jpeg'
         }
 
-        self.current_letter = tk.StringVar()
-        self.current_letter.set("Click on a letter to see the sign")
-
-        self.letter_label = tk.Label(master, textvariable=self.current_letter, font=('Helvetica', 18))
-        self.letter_label.pack(pady=20)
-
-        self.canvas = tk.Canvas(master, width=400, height=400)
+        self.canvas = tk.Canvas(master)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=self.canvas.yview)
@@ -66,18 +60,17 @@ class SignLanguageApp:
             photo = ImageTk.PhotoImage(img)
             label = tk.Label(self.inner_frame, image=photo)
             label.image = photo
-            label.bind("<Button-1>", lambda event, letter=letter: self.show_letter(letter))
             label.grid(row=row, column=column, padx=10, pady=10)
             column += 1
             if column == 6:  # Change this value according to the number of images you want in a row
                 column = 0
                 row += 1
-
-    def show_letter(self, letter):
-        self.current_letter.set("Current letter: " + letter)
+        # Update the canvas scroll region after loading all images
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def on_frame_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def on_canvas_configure(self, event):
         self.canvas.itemconfig(self.inner_frame, width=event.width)
+

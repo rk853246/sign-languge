@@ -1,22 +1,23 @@
 # Importing Libraries
+from LearnSign import SignLanguageApp
+from PIL import Image, ImageTk
+import tkinter as tk
 import numpy as np
 from itertools import cycle
 import math
 import cv2
-import os, sys
+import os
+import sys
 import traceback
 import pyttsx3
 import keras
 from cvzone.HandTrackingModule import HandDetector
 from string import ascii_uppercase
 import enchant
-ddd=enchant.Dict("en-US")
+ddd = enchant.Dict("en-US")
 hd = HandDetector(maxHands=1)
 hd2 = HandDetector(maxHands=1)
-import tkinter as tk
-from PIL import Image, ImageTk
-from LearnSign import SignLanguageApp
-offset=29
+offset = 29
 
 os.environ["THEANO_FLAGS"] = "device=cuda, assert_no_cpu_op=True"
 
@@ -25,116 +26,136 @@ os.environ["THEANO_FLAGS"] = "device=cuda, assert_no_cpu_op=True"
 
 class Application:
 
-    def __init__(self,master):
-        
+    def __init__(self, master):
 
-        
         self.vs = cv2.VideoCapture(0)
         self.current_image = None
         self.model = keras.models.load_model("dataModel.h5")
-        self.speak_engine=pyttsx3.init()
-        self.speak_engine.setProperty("rate",100)
-        voices=self.speak_engine.getProperty("voices")
-        self.speak_engine.setProperty("voice",voices[0].id)
+        self.speak_engine = pyttsx3.init()
+        self.speak_engine.setProperty("rate", 100)
+        voices = self.speak_engine.getProperty("voices")
+        self.speak_engine.setProperty("voice", voices[0].id)
 
         self.ct = {}
         self.ct['blank'] = 0
         self.blank_flag = 0
-        self.space_flag=False
-        self.next_flag=True
-        self.prev_char=""
-        self.count=-1
-        self.ten_prev_char=[]
+        self.space_flag = False
+        self.next_flag = True
+        self.prev_char = ""
+        self.count = -1
+        self.ten_prev_char = []
 
-        self.aboutstr='''Sign language recognition involves 
-        using computer vision and machine.'''
+        self.textofabout = '''
+Developing an accurate and efficient sign language recognition system to bridge communication gaps, empower the deaf community, and promote inclusivity through seamless interpretation and interaction.
+
+        
+        
+features:-
+1.Real time Sign Language detection.
+2.Sign Language Tutorial.
+3.Speak Character,words,sentence.
+4.Word recommandation
 
 
+
+Version - v1.0.0
+Developed by- RajKumar & Team
+Written in Python and Tkinter 
+
+
+
+
+
+
+
+
+
+    Copyright ©2024 '''
 
         for i in range(10):
             self.ten_prev_char.append(" ")
 
-
         for i in ascii_uppercase:
             self.ct[i] = 0
 
-        image_paths = ["image1.jpeg", "image2.webp", "image3.webp", "image4.webp","image5.webp"]
-    
-        interval=4000
+        image_paths = ["image1.jpeg", "image2.webp",
+                       "image3.webp", "image4.webp", "image5.webp"]
+
+        interval = 4000
         print("Loaded model from disk")
 
         self.master = master
 
-        #Title on window
+        # Title on window
         self.master.title("Sign Language Recognition")
         self.master.protocol('WM_DELETE_WINDOW', self.destructor)
         self.master.configure(bg="#F7EEDD")
 
-         #To get the actual screen width and height
+        # To get the actual screen width and height
         self.width = self.master.winfo_screenwidth()
         self.height = self.master.winfo_screenheight()
-        
-        #set the window's default dimensions
+
+        # set the window's default dimensions
         self.master.geometry(f"{self.width}x{self.height}")
-        
-        #Setting logo image by changing default wing logo
+
+        # Setting logo image by changing default wing logo
         self.logo = tk.PhotoImage(file='logo.png')
         self.master.iconphoto(False, self.logo)
 
-        #Importing image of logo
+        # Importing image of logo
         self.logo1 = ImageTk.PhotoImage(Image.open("interpreter.png"))
-        
-        #Frame 1
+
+        # Frame 1
         self.frame1 = tk.Frame(self.master, bg='#124076')
         self.frame1.place(x=7, y=7, relheight=1, width=200)
 
-        #Frame 2
+        # Frame 2
         self.frame2 = tk.Frame(self.master, bg='#C6EBC5')
         self.frame2.place(x=210, y=7, relheight=1, width=1148)
 
-        #Frame 5
+        # Frame 5
         self.frame3 = tk.Frame(self.master, bg='#9AC8CD')
         self.frame3.place(x=1158, y=7, relheight=1, width=200)
 
-        self.about=tk.Label(self.frame3,text="About Software",font=("Arial", 15,"bold", "underline"),bg='#9AC8CD')
+        self.about = tk.Label(self.frame3, text="About Software", font=(
+            "Arial", 15, "bold", "underline"), bg='#9AC8CD')
         self.about.pack()
 
-        self.aboutinfo=tk.Label(self.frame3,text=self.aboutstr,bg='#9AC8CD')
+        self.aboutinfo = tk.Text(self.frame3, wrap='word', height=45, width=52)
         self.aboutinfo.pack()
+        # Insert The Fact.
+        self.aboutinfo.insert(tk.END, self.textofabout, tk.WORD)
 
-        self.titleLabel=tk.Label(self.frame2,text="SIGN LANGUAGE RECOGNITION SYSTEM",bg='#C6EBC5',fg='#FC4100',font=("Arial", 33,"bold","underline"),border=2 )
-        self.titleLabel.place(x=27,y=3)
+        self.titleLabel = tk.Label(self.frame2, text="SIGN LANGUAGE RECOGNITION SYSTEM",
+                                   bg='#C6EBC5', fg='#FC4100', font=("Arial", 33, "bold"), border=2)
+        self.titleLabel.place(x=27, y=5)
 
+        self.images = [Image.open(path).resize(
+            (900, 600), Image.LANCZOS) for path in image_paths]
+        self.image_labels = cycle([ImageTk.PhotoImage(image)
+                                  for image in self.images])
 
-        self.images = [Image.open(path).resize((900, 600), Image.LANCZOS) for path in image_paths]
-        self.image_labels = cycle([ImageTk.PhotoImage(image) for image in self.images])
-        
         # Create label to display images
         self.image_label = tk.Label(self.frame2)
-        self.image_label.place(x=20,y=70)
-        
+        self.image_label.place(x=20, y=70)
+
         # Start the slideshow
         self.interval = interval
         self.show_next_image()
-        
-   
-        #Setting the logo image on the frame b
+
+        # Setting the logo image on the frame b
         self.label_logo = tk.Label(self.frame1, image=self.logo1)
         self.label_logo.place(x=30, y=20)
 
-
-        self.B_Recognize = tk.Button(self.frame1, text='Recognize',font='sans 11 bold',command=self.create_widgets)
+        self.B_Recognize = tk.Button(
+            self.frame1, text='Recognize', font='sans 11 bold', command=self.create_widgets)
         self.B_Recognize.place(x=22, y=200, width=150)
-        self.B_Tutorial = tk.Button(self.frame1, text='Tutorial',font='sans 11 bold',command=self.open_tutorial)
+        self.B_Tutorial = tk.Button(
+            self.frame1, text='Tutorial', font='sans 11 bold', command=self.open_tutorial)
         self.B_Tutorial.place(x=22, y=250, width=150)
-        self.B_Close = tk.Button(self.frame1, text='Close',font='sans 11 bold',command=self.destructor)
+        self.B_Close = tk.Button(
+            self.frame1, text='Close', font='sans 11 bold', command=self.destructor)
         self.B_Close.place(x=22, y=300, width=150)
-
-
-
-
-
-       
 
     def create_widgets(self):
 
@@ -142,65 +163,59 @@ class Application:
         self.frame3.destroy()
         self.image_label.destroy()
 
-        
         self.panel = tk.Label(self.frame2)
         self.panel.place(x=80, y=10, width=500, height=480)
 
         self.panel2 = tk.Label(self.frame2)  # initialize image panel
         self.panel2.place(x=650, y=50, width=400, height=400)
 
-
-        self.panel3 = tk.Label(self.frame2,bg='#C6EBC5')  # Current Symbol
+        self.panel3 = tk.Label(self.frame2, bg='#C6EBC5')  # Current Symbol
         self.panel3.place(x=360, y=505)
 
-        self.T1 = tk.Label(self.frame2,bg='#C6EBC5')
+        self.T1 = tk.Label(self.frame2, bg='#C6EBC5')
         self.T1.place(x=80, y=500)
         self.T1.config(text="Character :", font=("Courier", 30, "bold"))
 
-        self.panel5 = tk.Label(self.frame2,bg='#C6EBC5')  # Sentence
+        self.panel5 = tk.Label(self.frame2, bg='#C6EBC5')  # Sentence
         self.panel5.place(x=380, y=552)
 
-        self.T3 = tk.Label(self.frame2,bg='#C6EBC5')
+        self.T3 = tk.Label(self.frame2, bg='#C6EBC5')
         self.T3.place(x=80, y=550)
         self.T3.config(text="Sentence  :", font=("Courier", 30, "bold"))
 
-        self.T4 = tk.Label(self.frame2,bg='#C6EBC5')
+        self.T4 = tk.Label(self.frame2, bg='#C6EBC5')
         self.T4.place(x=80, y=600)
-        self.T4.config(text="Suggestions :", fg="red", font=("Courier", 30, "bold"))
+        self.T4.config(text="Suggestions :", font=("Courier", 30, "bold"))
 
+        self.b1 = tk.Button(self.frame2, bg='#C6EBC5', border=0)
+        self.b1.place(x=390, y=600)
 
-        self.b1=tk.Button(self.frame2,bg='#C6EBC5',border=0)
-        self.b1.place(x=390,y=600)
-
-        self.b2 = tk.Button(self.frame2,bg='#C6EBC5',border=0)
+        self.b2 = tk.Button(self.frame2, bg='#C6EBC5', border=0)
         self.b2.place(x=590, y=600)
 
-        self.b3 = tk.Button(self.frame2,bg='#C6EBC5',border=0)
+        self.b3 = tk.Button(self.frame2, bg='#C6EBC5', border=0)
         self.b3.place(x=790, y=600)
 
-        self.b4 = tk.Button(self.frame2,bg='#C6EBC5',border=0)
+        self.b4 = tk.Button(self.frame2, bg='#C6EBC5', border=0)
         self.b4.place(x=990, y=600)
 
-        self.speak = tk.Button(self.frame2,border=0)
-        self.speak.place(x=790, y=480)
-        self.speak.config(text="Speak", font=("Courier", 20), wraplength=100, command=self.speak_fun)
+        self.speak = tk.Button(self.frame2, border=0)
+        self.speak.place(x=760, y=480)
+        self.speak.config(text="Speak", font=("Courier", 20),
+                          wraplength=100, command=self.speak_fun)
 
-        self.clear = tk.Button(self.frame2,border=0)
-        self.clear.place(x=900, y=480)
-        self.clear.config(text="Clear", font=("Courier", 20), wraplength=100, command=self.clear_fun)
-
-
-
-
+        self.clear = tk.Button(self.frame2, border=0)
+        self.clear.place(x=870, y=480)
+        self.clear.config(text="Clear", font=("Courier", 20),
+                          wraplength=100, command=self.clear_fun)
 
         self.str = " "
-        self.ccc=0
+        self.ccc = 0
         self.word = " "
         self.current_symbol = "C"
         self.photo = "Empty"
 
-
-        self.word1=" "
+        self.word1 = " "
         self.word2 = " "
         self.word3 = " "
         self.word4 = " "
@@ -213,7 +228,7 @@ class Application:
             cv2image = cv2.flip(frame, 1)
             hands = hd.findHands(cv2image, draw=False, flipType=True)
 
-            cv2image_copy=np.array(cv2image)
+            cv2image_copy = np.array(cv2image)
             cv2image = cv2.cvtColor(cv2image, cv2.COLOR_BGR2RGB)
             self.current_image = Image.fromarray(cv2image)
             imgtk = ImageTk.PhotoImage(image=self.current_image)
@@ -225,8 +240,9 @@ class Application:
                 hand = hands[0]
 
                 x, y, w, h = hand[0]['bbox']
-            
-                image = cv2image_copy[y - offset:y + h + offset, x - offset:x + w + offset]
+
+                image = cv2image_copy[y - offset:y +
+                                      h + offset, x - offset:x + w + offset]
 
                 white = cv2.imread("white.jpg")
                 # img_final=img_final1=img_final2=0
@@ -237,7 +253,7 @@ class Application:
                 if handz:
                     hand = handz[0]
                     self.pts = hand[0]['lmList']
-                
+
                     # x1,y1,w1,h1=hand['bbox']
 
                     os = ((400 - w) // 2) - 15
@@ -269,9 +285,10 @@ class Application:
                              3)
 
                     for i in range(21):
-                        cv2.circle(white, (self.pts[i][0] + os, self.pts[i][1] + os1), 2, (0, 0, 255), 1)
+                        cv2.circle(
+                            white, (self.pts[i][0] + os, self.pts[i][1] + os1), 2, (0, 0, 255), 1)
 
-                    res=white
+                    res = white
                     self.predict(res)
 
                     self.current_image2 = Image.fromarray(res)
@@ -281,24 +298,28 @@ class Application:
                     self.panel2.imgtk = imgtk
                     self.panel2.config(image=imgtk)
 
-                    self.panel3.config(text=self.current_symbol, font=("Courier", 30))
+                    self.panel3.config(
+                        text=self.current_symbol, font=("Courier", 30))
 
-                    #self.panel4.config(text=self.word, font=("Courier", 30))
+                    # self.panel4.config(text=self.word, font=("Courier", 30))
 
+                    self.b1.config(text=self.word1, font=(
+                        "Courier", 20), wraplength=825, command=self.action1)
+                    self.b2.config(text=self.word2, font=(
+                        "Courier", 20), wraplength=825,  command=self.action2)
+                    self.b3.config(text=self.word3, font=(
+                        "Courier", 20), wraplength=825,  command=self.action3)
+                    self.b4.config(text=self.word4, font=(
+                        "Courier", 20), wraplength=825,  command=self.action4)
 
-
-                    self.b1.config(text=self.word1, font=("Courier", 20), wraplength=825, command=self.action1)
-                    self.b2.config(text=self.word2, font=("Courier", 20), wraplength=825,  command=self.action2)
-                    self.b3.config(text=self.word3, font=("Courier", 20), wraplength=825,  command=self.action3)
-                    self.b4.config(text=self.word4, font=("Courier", 20), wraplength=825,  command=self.action4)
-
-            self.panel5.config(text=self.str, font=("Courier", 30), wraplength=1025)
+            self.panel5.config(text=self.str, font=(
+                "Courier", 30), wraplength=1025)
         except Exception:
             print("==", traceback.format_exc())
         finally:
             self.master.after(1, self.video_loop)
 
-    def distance(self,x,y):
+    def distance(self, x, y):
         return math.sqrt(((x[0] - y[0]) ** 2) + ((x[1] - y[1]) ** 2))
 
     def action1(self):
@@ -308,15 +329,13 @@ class Application:
         self.str = self.str[:idx_word]
         self.str = self.str + self.word1.upper()
 
-
     def action2(self):
         idx_space = self.str.rfind(" ")
         idx_word = self.str.find(self.word, idx_space)
         last_idx = len(self.str)
-        self.str=self.str[:idx_word]
-        self.str=self.str+self.word2.upper()
-        #self.str[idx_word:last_idx] = self.word2
-
+        self.str = self.str[:idx_word]
+        self.str = self.str+self.word2.upper()
+        # self.str[idx_word:last_idx] = self.word2
 
     def action3(self):
         idx_space = self.str.rfind(" ")
@@ -325,8 +344,6 @@ class Application:
         self.str = self.str[:idx_word]
         self.str = self.str + self.word3.upper()
 
-
-
     def action4(self):
         idx_space = self.str.rfind(" ")
         idx_word = self.str.find(self.word, idx_space)
@@ -334,21 +351,19 @@ class Application:
         self.str = self.str[:idx_word]
         self.str = self.str + self.word4.upper()
 
-
     def speak_fun(self):
         self.speak_engine.say(self.str)
         self.speak_engine.runAndWait()
 
-
     def clear_fun(self):
-        self.str=" "
+        self.str = " "
         self.word1 = " "
         self.word2 = " "
         self.word3 = " "
         self.word4 = " "
 
     def predict(self, test_image):
-        white=test_image
+        white = test_image
         white = white.reshape(1, 400, 400, 3)
         prob = np.array(self.model.predict(white)[0], dtype='float32')
         ch1 = np.argmax(prob, axis=0)
@@ -362,11 +377,12 @@ class Application:
 
         # condition for [Aemnst]
         l = [[5, 2], [5, 3], [3, 5], [3, 6], [3, 0], [3, 2], [6, 4], [6, 1], [6, 2], [6, 6], [6, 7], [6, 0], [6, 5],
-             [4, 1], [1, 0], [1, 1], [6, 3], [1, 6], [5, 6], [5, 1], [4, 5], [1, 4], [1, 5], [2, 0], [2, 6], [4, 6],
+             [4, 1], [1, 0], [1, 1], [6, 3], [1, 6], [5, 6], [5, 1], [
+                 4, 5], [1, 4], [1, 5], [2, 0], [2, 6], [4, 6],
              [1, 0], [5, 7], [1, 6], [6, 1], [7, 6], [2, 5], [7, 1], [5, 4], [7, 0], [7, 5], [7, 2]]
         if pl in l:
             if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]):
+                    1]):
                 ch1 = 0
                 # print("00000")
 
@@ -379,11 +395,12 @@ class Application:
                 # print("00000")
 
         # condition for [c0][aemnst]
-        l = [[0, 0], [0, 6], [0, 2], [0, 5], [0, 1], [0, 7], [5, 2], [7, 6], [7, 1]]
+        l = [[0, 0], [0, 6], [0, 2], [0, 5], [
+            0, 1], [0, 7], [5, 2], [7, 6], [7, 1]]
         pl = [ch1, ch2]
         if pl in l:
             if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[4][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][
-                0] and self.pts[0][0] > self.pts[20][0]) and self.pts[5][0] > self.pts[4][0]:
+                    0] and self.pts[0][0] > self.pts[20][0]) and self.pts[5][0] > self.pts[4][0]:
                 ch1 = 2
                 # print("22222")
 
@@ -395,18 +412,15 @@ class Application:
                 ch1 = 2
                 # print("22222")
 
-
         # condition for [gh][bdfikruvw]
         l = [[1, 4], [1, 5], [1, 6], [1, 3], [1, 0]]
         pl = [ch1, ch2]
 
         if pl in l:
             if self.pts[6][1] > self.pts[8][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1] and self.pts[0][0] < self.pts[8][
-                0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
+                    0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
                 ch1 = 3
                 print("33333c")
-
-
 
         # con for [gh][l]
         l = [[4, 6], [4, 1], [4, 5], [4, 3], [4, 7]]
@@ -471,7 +485,7 @@ class Application:
         pl = [ch1, ch2]
         if pl in l:
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]) and self.pts[4][1] > self.pts[10][1]:
+                    1]) and self.pts[4][1] > self.pts[10][1]:
                 ch1 = 5
                 print("55555b")
 
@@ -480,7 +494,7 @@ class Application:
         pl = [ch1, ch2]
         if pl in l:
             if self.pts[4][1] + 17 > self.pts[8][1] and self.pts[4][1] + 17 > self.pts[12][1] and self.pts[4][1] + 17 > self.pts[16][1] and self.pts[4][
-                1] + 17 > self.pts[20][1]:
+                    1] + 17 > self.pts[20][1]:
                 ch1 = 5
                 print("55555a")
 
@@ -493,7 +507,8 @@ class Application:
                 # print("55555")
 
         # con for [pqz][aemnst]
-        l = [[0, 2], [0, 6], [0, 1], [0, 5], [0, 0], [0, 7], [0, 4], [0, 3], [2, 7]]
+        l = [[0, 2], [0, 6], [0, 1], [0, 5], [
+            0, 0], [0, 7], [0, 4], [0, 3], [2, 7]]
         pl = [ch1, ch2]
         if pl in l:
             if self.pts[0][0] < self.pts[8][0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
@@ -531,7 +546,6 @@ class Application:
             if self.pts[5][0] > self.pts[16][0]:
                 ch1 = 6
                 print("666661")
-
 
         # condition for [yj][x]
         print("2222  ch1=+++++++++++++++++", ch1, ",", ch2)
@@ -573,7 +587,7 @@ class Application:
         pl = [ch1, ch2]
         if pl in l:
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
+                    1]):
                 ch1 = 1
                 print("111111")
 
@@ -598,7 +612,8 @@ class Application:
         # con for [d][pqz]
         fg = 19
         # print("_________________ch1=",ch1," ch2=",ch2)
-        l = [[5, 0], [3, 4], [3, 0], [3, 1], [3, 5], [5, 5], [5, 4], [5, 1], [7, 6]]
+        l = [[5, 0], [3, 4], [3, 0], [3, 1], [
+            3, 5], [5, 5], [5, 4], [5, 1], [7, 6]]
         pl = [ch1, ch2]
         if pl in l:
             if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
@@ -631,7 +646,8 @@ class Application:
                 print("1111140")
 
         # con for [i][pqz]
-        l = [[5, 4], [5, 5], [5, 1], [0, 3], [0, 7], [5, 0], [0, 2], [6, 2], [7, 5], [7, 1], [7, 6], [7, 7]]
+        l = [[5, 4], [5, 5], [5, 1], [0, 3], [0, 7], [5, 0],
+             [0, 2], [6, 2], [7, 5], [7, 1], [7, 6], [7, 7]]
         pl = [ch1, ch2]
         if pl in l:
             if ((self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
@@ -644,13 +660,14 @@ class Application:
         pl = [ch1, ch2]
         if pl in l:
             if (self.pts[4][0] < self.pts[5][0] + 15) and (
-            (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
-             self.pts[18][1] > self.pts[20][1])):
+                (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
+                 self.pts[18][1] > self.pts[20][1])):
                 ch1 = 7
                 print("111114lll;;p")
 
         # con for [uvr]
-        l = [[5, 5], [5, 0], [5, 4], [5, 1], [4, 6], [4, 1], [7, 6], [3, 0], [3, 5]]
+        l = [[5, 5], [5, 0], [5, 4], [5, 1], [
+            4, 6], [4, 1], [7, 6], [3, 0], [3, 5]]
         pl = [ch1, ch2]
         if pl in l:
             if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
@@ -666,7 +683,7 @@ class Application:
             if not (self.pts[0][0] + fg < self.pts[8][0] and self.pts[0][0] + fg < self.pts[12][0] and self.pts[0][0] + fg < self.pts[16][0] and
                     self.pts[0][0] + fg < self.pts[20][0]) and not (
                     self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][
-                0]) and self.distance(self.pts[4], self.pts[11]) < 50:
+                        0]) and self.distance(self.pts[4], self.pts[11]) < 50:
                 ch1 = 1
                 print("111116")
 
@@ -688,7 +705,7 @@ class Application:
             if self.pts[4][0] < self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][0]:
                 ch1 = 'A'
             if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][
-                0] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]:
+                    0] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]:
                 ch1 = 'T'
             if self.pts[4][1] > self.pts[8][1] and self.pts[4][1] > self.pts[12][1] and self.pts[4][1] > self.pts[16][1] and self.pts[4][1] > self.pts[20][1]:
                 ch1 = 'E'
@@ -732,22 +749,22 @@ class Application:
 
         if ch1 == 1:
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
+                    1]):
                 ch1 = 'B'
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]):
+                    1]):
                 ch1 = 'D'
             if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
+                    1]):
                 ch1 = 'F'
             if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
+                    1]):
                 ch1 = 'I'
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]):
+                    1]):
                 ch1 = 'W'
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]) and self.pts[4][1] < self.pts[9][1]:
+                    1]) and self.pts[4][1] < self.pts[9][1]:
                 ch1 = 'K'
             if ((self.distance(self.pts[8], self.pts[12]) - self.distance(self.pts[6], self.pts[10])) < 8) and (
                     self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
@@ -763,51 +780,47 @@ class Application:
                     self.pts[20][1]):
                 ch1 = 'R'
 
-        if ch1 == 1 or ch1 =='E' or ch1 =='S' or ch1 =='X' or ch1 =='Y' or ch1 =='B':
+        if ch1 == 1 or ch1 == 'E' or ch1 == 'S' or ch1 == 'X' or ch1 == 'Y' or ch1 == 'B':
             if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1=" "
-
-
+                ch1 = " "
 
         print(self.pts[4][0] < self.pts[5][0])
-        if ch1 == 'E' or ch1=='Y' or ch1=='B':
+        if ch1 == 'E' or ch1 == 'Y' or ch1 == 'B':
             if (self.pts[4][0] < self.pts[5][0]) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1="next"
-
+                ch1 = "next"
 
         if ch1 == 'Next' or 'B' or 'C' or 'H' or 'F' or 'X':
             if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][0]) and (self.pts[4][1] < self.pts[8][1] and self.pts[4][1] < self.pts[12][1] and self.pts[4][1] < self.pts[16][1] and self.pts[4][1] < self.pts[20][1]) and (self.pts[4][1] < self.pts[6][1] and self.pts[4][1] < self.pts[10][1] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]):
                 ch1 = 'Backspace'
 
-
-        if ch1=="next" and self.prev_char!="next":
-            if self.ten_prev_char[(self.count-2)%10]!="next":
-                if self.ten_prev_char[(self.count-2)%10]=="Backspace":
-                    self.str=self.str[0:-1]
+        if ch1 == "next" and self.prev_char != "next":
+            if self.ten_prev_char[(self.count-2) % 10] != "next":
+                if self.ten_prev_char[(self.count-2) % 10] == "Backspace":
+                    self.str = self.str[0:-1]
                 else:
                     if self.ten_prev_char[(self.count - 2) % 10] != "Backspace":
-                        self.str = self.str + self.ten_prev_char[(self.count-2)%10]
+                        self.str = self.str + \
+                            self.ten_prev_char[(self.count-2) % 10]
             else:
                 if self.ten_prev_char[(self.count - 0) % 10] != "Backspace":
-                    self.str = self.str + self.ten_prev_char[(self.count - 0) % 10]
+                    self.str = self.str + \
+                        self.ten_prev_char[(self.count - 0) % 10]
 
-
-        if ch1=="  " and self.prev_char!="  ":
+        if ch1 == "  " and self.prev_char != "  ":
             self.str = self.str + "  "
 
-        self.prev_char=ch1
-        self.current_symbol=ch1
+        self.prev_char = ch1
+        self.current_symbol = ch1
         self.count += 1
-        self.ten_prev_char[self.count%10]=ch1
+        self.ten_prev_char[self.count % 10] = ch1
 
-
-        if len(self.str.strip())!=0:
-            st=self.str.rfind(" ")
-            ed=len(self.str)
-            word=self.str[st+1:ed]
-            self.word=word
-            print("----------word = ",word)
-            if len(word.strip())!=0:
+        if len(self.str.strip()) != 0:
+            st = self.str.rfind(" ")
+            ed = len(self.str)
+            word = self.str[st+1:ed]
+            self.word = word
+            print("----------word = ", word)
+            if len(word.strip()) != 0:
                 ddd.check(word)
                 lenn = len(ddd.suggest(word))
                 if lenn >= 4:
@@ -827,7 +840,6 @@ class Application:
                 self.word3 = " "
                 self.word4 = " "
 
-
     def destructor(self):
 
         print("Closing Application...")
@@ -837,7 +849,7 @@ class Application:
         cv2.destroyAllWindows()
 
     def open_tutorial(self):
-        self.root= tk.Toplevel()
+        self.root = tk.Toplevel()
         app = SignLanguageApp(self.root)
         self.root.mainloop()
 
@@ -848,14 +860,14 @@ class Application:
         self.frame2.after(self.interval, self.show_next_image)
 
 
-
 print("Starting Application...")
+
 
 def main():
     master = tk.Tk()
-    app =Application(master)
+    app = Application(master)
     master.mainloop()
+
 
 if __name__ == "__main__":
     main()
-
